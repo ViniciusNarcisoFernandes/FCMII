@@ -1,0 +1,191 @@
+# https://emec.mec.gov.br 
+
+# Install 
+install.packages("RSelenium")
+install.packages("netstat")
+install.packages("openxlsx")
+
+# Abrir um navegador 
+library(RSelenium)
+library(wdman)
+library(netstat)
+library(openxlsx)
+
+# Manipulação de dados
+library(tidyverse)
+
+# Ler o html 
+library(rvest)
+
+wpage <- "https://emec.mec.gov.br "
+maxpages <- 13
+
+# JAVA PATH
+# firefox
+# selenium()
+# linguagem 
+# chromever
+
+selenium_object <- selenium(retcommand = TRUE, check = TRUE)
+
+binman::list_versions("firefox")
+
+remote_driver <- rsDriver(
+  browser = "firefox",
+  port = free_port(),
+  verbose = FALSE,
+  chromever = NULL
+)
+
+# Abrir a página
+remDr <- remote_driver$client 
+
+remDr$navigate(wpage)
+
+# Tempo de 15 segundos para rodar a próxima página (carregar página)
+Sys.sleep(15)
+
+barra <- remDr$findElement(using = "id", "mainFrame")
+hh <- barra$getElementAttribute(attrName = "src")[[1]]
+remDr$navigate(hh)
+Sys.sleep(15)
+
+# Obrigar a encontrar a aba
+
+# Retorna uma lista - Ser cuidadoso com isso
+aba <- remDr$findElements(using = "xpath", value = "/html/body/div[2]/div[2]/div/div[3]/ul/li[1]/a")
+aba$clickElement() 
+
+# /html/body/div[2]/div[2]/div/div[3]/ul/li[1]/a
+
+aba <- remDr$findElement(using = "xpath", value = "/html/body/div[2]/div[2]/div/div[3]/ul/li[1]/a")
+aba[[1]]$clickElement() 
+  
+# Encontrando os elementos
+radio_buttom <- remDr$findElements(using = "id", value = "consulta_avancada_rad_buscar_por")
+
+# Clicar no segundo botão
+radio_buttom[[2]]$clickElement()
+
+# Achar a caixa
+pesq_exata <- remDr$findElement(using = "id", value = "consulta_avancada_chk_pesquisa_exata")
+pesq_exata$clickElement()
+
+# Achar a caixinha do curso
+curso <- remDr$findElements(using = "id", value = "txt_no_curso")
+curso$sendKeysToElement(sendKeys = list("medicina"))
+
+situacao <- remDr$findElements(using = "xpath", value = "/")
+situacao$clickElement()
+
+remDr$findElement(using = "id", value = "btnPesqAvancada")$clickElement()
+Sys.sleep(15)
+
+# Encontrando a tabela no html (Corpo da tabela)
+#tab <- remDr$findElement(using = "xpath", value = "/html/body/div[2]/div[2]/div/div[3]/div[1]/div/div/table/tbody")
+tab <- remDr$findElement(using = "xpath", value = "//*[@id=\"tbyDados\"]")
+img <- tab$findChildElements(using = "tag", "img")
+
+pop <- lapply(img, function(x) x$getElementAttribute("onclick"))
+
+pop <- Reduce(c,pop) %>% Reduce(c, .)
+pop <- str_extract(pop, "(?<=popup\\(\\').*(?=\\',)")
+
+for(i in 2:maxpages){
+  
+  remDr$findElement(using = "xpath", value = "/html/body/div[2]/div[2]/div/div[3]/div[1]/div/div/table/tfoot/tr/td/div/div/ul/li[17]")$clickElement()
+  Sys.sleep(20)
+  
+  # Encontrando tabela de html
+  tab <- remDr$findElement(using = "xpath", value = "/html/body/div[2]/div[2]/div/div[3]/div[1]/div/div/table/tfoot/tr/td/div/div/ul/li[17]")
+  img <- tab$findChildElements(using = "tag", "img")
+  
+  pop_aux <- lapply(img, function(x) x$getElementAttribute("onclick"))
+  
+  pop_aux <- Reduce(c, pop_aux) %>% Reduce(c, .)
+  pop_aux <- str_extract(pop_aux, "(?<=popup\\(\\').*(?=\\',)")
+  pop <- c(pop, pop_aux)
+}
+
+
+extract <- function(xx){
+  
+  # função não usa o Selenium - Anda de pgn em pgn para pegar o html
+  pagina <- httr::GET(pasteO(wpage, xx))
+  httr::http_type(pagina)
+  jsonText <- httr::content(pagina, "text")
+  jsonText <- str_split_l(jsonText, "\\n") # Dividindo o texto
+  
+  src_p <- grep("src=",jsonText)
+  int_p <- grep("consulta_cadastro", jsonText)
+  
+  l_int <- src_p[src_p > int_p][1]
+  end <- str_extract(jsonText[l_text], "(?<=\\\").*(?*\\\")")
+  
+  
+  # Cada página é uma reflexão da outra página
+  # Página 2
+  pagina2 <- httr::GET(pasteO(wpage, end))
+  httr::http_type(pagina2)
+  jsonText <- httr::content(x = pagina2, as = "text", encoding = "latin1")
+  jsonText <- str_split_l(jsonText, "\\n")
+  
+  linha <- grepl("detalhe_ies",jsonText)
+  end2 <- str_extract(jsonText[linha], "(?<=link=\\\").*(?=\\\")")
+  
+  
+  # Página 3
+  pagina3 <- httr::GET(pasteO(wpage, end2))
+  jsonText <- httr::context(x = pagina3, as = "text", encoding = "latin1")
+  jsonText <- str_split_l(jsonText, "\\n")
+  
+  
+  page <- read_html(pasteO(wpage, end2))
+  
+  # Transformando em texto
+  texto <- page %>%
+    rvest::html_nodes("td") %>%
+    html_children() %>% html_text() %>%
+    gsub("\\n", "", .) %>%
+    trimws("both")
+  
+  ll <- grep("[Ee]-mail", texto)
+  
+  t_int <- text[ll] %>% str_split_l("  ")
+  
+  t_int <- t_int [t_int != ""]
+  
+  # Extraindo a informação desejada
+  email <- t_int[grep("[Ee]-mail", t_int)+1]
+  nome <- t_int[grep("Nome .* IES", t_int)+1]
+  tel <- t_int[grep("Telefone",t_int)+1]
+  UF <- t_int[grep("UF:",t_int)+1]
+  cidade <- t_int[grep("Munic[ii]pio", t_int)+1]
+  site <- t_int[grep("S[ii]tio", t_int)+1]
+  ms_site <- pasteO(wpage,xx)
+  
+  # Adicionando num dataframe
+  data.frame(nome, email, tel, UF, cidade, site, ms_site)
+  
+}
+
+xx = pop[365]
+
+dados <- lapply(pop, extract)
+length(dados)
+
+
+df <- Reduce(rbind, dados)
+
+df <- df %>% mutate(nr = row_number())
+
+openxlsx::write.xlsx(df, "output/raw_data.xlsx")
+
+
+df %>%
+  distinct(nome, email, cidade, UF, .keep_all = TRUE) %>%
+  openxlsx::write.xlsx("filtered_data.xlsx")
+
+# close the server
+remote_driver$server$stop()
+
