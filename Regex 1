@@ -1,0 +1,145 @@
+# Lendo pacotes ----------------------------------------------------------------
+if(!require(pdftools)) install.packages("pdftools")
+
+library(tidyverse)
+library(pdftools)
+
+
+# Para checar ------------------------------------------------------------------
+# Vinicius Narciso fernandes
+# Vinicius Narciso fernandes
+
+
+# VINICIUS NARCISO FERNANDES
+# vinicius-narciso.fernandes@unesp.br
+# vinicius261295
+
+# Algumas regras ---------------------------------------------------------------
+
+#.                                      Qualquer símbolo
+# \.                                    Símbolo do ponto
+# \s x \S
+# {} repetiçao
+
+# .[]-{}^$*+?()|
+
+# . -> qualquer caracter
+# [] -> qualquer caracter aqui dentro
+# - -> intervalo (dentro do [])
+# {} -> repetição
+
+#^ -> início da linha
+#$ -> final da linha
+
+#* -> zero ou mais
+#+ -> um ou mais
+
+# ? --> pode haver
+
+#() -> grupo
+#| -> ou
+
+# https://regexr.com/
+
+# Lendo PDF ---------------------------------------------------------------
+pdf <- pdf_text("cadastro.pdf")
+pdf <- str_split_1(pdf,"\\n")
+pdf 
+
+# Vamos achas as diferentes tabelas 
+
+# Começo
+inicios <- grep("[nN]ome",pdf)
+finais <- grep("(cpf|CPF)",pdf)
+
+# Vamos criar uma tabela uma tabela estruturada com as infos 
+
+# Name, Alias, Date of Birth, Address, Number, City
+# Phone Area, Phone Number, ID number 
+
+# Extraindo o nome 
+x <- pdf[grepl("[nN]ome:",pdf)]
+
+# gsub(padrão, padrão substituir, variável)
+x <- gsub("[nN]ome:", "", x)
+
+# Deletar parenteses com zero ou mais parenteses
+x <- gsub("\\(.*\\)", "", x)
+
+# Recorta espaços sobrando 
+x <- trimws(x, "both")
+
+# Extraindo o alias
+
+y <- pdf[grepl("[nN]ome:",pdf)]
+
+y <- str_extract(y, "\\(.*\\)")
+
+y <- gsub("\\(\\w+ |\\)", y)
+
+# Outra forma de extrair o ALIAS
+
+y <- pdf[grepl("[nN]ome:"),pdf]
+y <- str_extract(y,"(?<=\\(aka ).*(?=\\))")
+
+# (?<=\\(aka )
+# str_extract("Vinicius", "i.u")
+
+# CEP
+
+z <- pdf[grepl("[cC][eE][pP]",pdf)]
+z <- gsub(".*CEP: *", "", z)
+z <- gsub("\\D", "", z)
+
+z1 <- str_extract(z, "^\\d{5}")
+z2 <- str_extract(z, "\\d{3}$")
+
+z <- paste(z1,z2, sep = "-")
+
+# Outra forma de fazer
+z <- pdf[grepl("[cC][eE][pP]",pdf)]
+
+z <- str_extract(z,"(?<=CEP:)[\\d\\.\\-]+(?:\\w+)$")
+
+z <- gsub("\\D", "", z)
+
+z1 <- str_extract(z, "^\\d{5}")
+z2 <- str_extract(z, "\\d{3}$")
+
+z <- paste(z1,z2, sep = "-")
+
+# CPF: ??
+cpf <- pdf[grepl("cpf:|CPF:", pdf)]
+cpf <- gsub(".*[cC][pP][fF]: *", "", cpf)
+cpf <- gsub("\\D", "", cpf)
+
+# Telefone 
+
+tel <- pdf[grepl("Tel:?", pdf)]
+tel <- gsub("\\D", "", tel)
+
+tel1 <- str_extract(tel,"^\\d{2}")
+tel2 <- str_extract(tel,"(?<=\\d{2})\\d{5}(?=\\d{4})")
+tel3 <- str_extract(tel,"(?<=\\d{7})\\d{4}")
+
+tel <- paste("(",tel1,")", tel2, "-",tel3)
+
+# Data de Nascimento
+dt <- pdf[grepl("Da?t.? (de ) ?[Nn]asc",pdf)]
+
+dt <- gsub(".*:", "",dt)
+
+obs_dt <- str_extract(dt,"[A-Za-z]+\\.[A-Za-z]*\\.?$")
+
+dt <- triws(dt,"both")
+
+dt <- str_extract(dt,"\\d+[-/]\\d+[-/]\\d+(\\.\\d+)?|\\d+[-/]\\w+[-/]\\d+")
+dt <- gsub("\\.", "",dt) 
+
+dt <- gsub("[-/](\d{3})$", "-0\\1", dt)
+
+dt_char <- dt
+
+dmy(dt)
+
+day("01/01/1000") %>% typeof
