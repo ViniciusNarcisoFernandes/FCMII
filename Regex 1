@@ -143,3 +143,77 @@ dt_char <- dt
 dmy(dt)
 
 day("01/01/1000") %>% typeof
+
+library(tidyverse)
+library(pdftools)
+
+# Aula 4
+# Endereço (Tarefa - Organizar o endereço)
+# Rua / Local
+# Número
+# Cidade/Planeta
+
+v <- pdf[grep("Endereço", pdf)]
+v <- gsub("CEP.*", "", v)
+v <- gsub("Enderço: *", "", v)
+
+Numeros <- str_extract(v, "\\d+")
+#ifelse(is.na(Numeros), "SN", Numeros)
+# Logradouro <- str_extract(v, "^.*.") Primeira forma de fazer
+lista_log <- str_split(v, "\\d+")
+Logradouro <- lapply(lista_log, function(x) x[1]) %>% Reduce(c, .)
+
+
+Bairro <- gsub(".*,", "", v)
+
+Bairro %>% trimws("both") %>% gsub("\\.", "", .)
+
+# Teste exemplo
+y <- pdf[grepl("[nN]ome:", pdf)]
+y <- str_extract(y,"\\s+(?=\\(aka))")
+
+# data frama 
+df <- data.frame(Nome = x, Alias = y, CEP = z,  CPF = cpf, 
+                 telefone, 'Data de Nascimento' = dt, Logradouro, 
+                 Numero = Numeros, Bairro)
+
+
+# Library 
+install.packages("openxlsx")
+openxlsx::write(df, "Resultado.xlsx")
+
+
+# Titanic-----------------------------------------------------------------------
+
+titanic <- read.csv("titanic.csv") %>% bind_rows(read.csv("titanicII.csv"))
+
+titanic %>%
+  filter(grepl("Cumings", Name))
+
+pronome <- str_extract(titanic$Name, "[A-Za-z]+\\.(?=\\.)")
+
+# Verificando valores NA
+sum(is.na(pronome))
+
+lastname <- str_extract(titanic$Name, "[A-Za-z]+\\.(?=,)")
+
+name <- str_extract(titanic$Name, "(?<=\\. ).*(?= +\\()|(?<=\\. ).*$")
+
+name <- trimws(name,"both")
+
+df <- data.frame(name, lastname, pronome, original = titanic)
+View(df)
+
+df %>% 
+  rowwise() %>%
+  mutate(
+    singlename = case_when(
+      grepl("Mrs|mrs|MRS|[cC]ountess|[lL]ady|MLLe",pronome)
+      TRUE ~ NA_character)) %>% View
+
+
+x <- " Banana Nanica" 
+str_extract(x, "Nanica")
+
+glimpse(titanic)
+names(titanic) 
