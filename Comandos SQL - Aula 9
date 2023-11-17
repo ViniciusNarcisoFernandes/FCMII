@@ -1,0 +1,112 @@
+# Criando tabela
+CREATE TABLE temp_tables.profissoes(
+  professional_status VARCHAR.
+  status_profissional VARCHAR
+)
+
+## Selecionar a tabela
+SELECT * FROM sales.customers 
+
+## Selecionando as colunas 
+SELECT customer_id, cpf
+FROM sales.customers
+
+# Deletar tabela 
+DROP TABLE temp_tables.profissoes
+
+## update da linha
+UPDATE temp_tables.profissoes
+SET professional_status = "intern"
+WHERE status_professional = "estagiário"
+
+# Deleta linha
+DELETE FROM temp_tables.profissoes 
+WHERE status_professional = "desempregado"
+OR status_professional = "estagiário"
+
+## Selecionar colunas e distinguir 
+SELECT DISTINCT brand
+FROM sales.products
+
+## Selecionar colunas e distinguir e ordenar
+SELECT DISTINCT brand
+FROM sales.products
+ORDER BY brand DESC # Ordena em ordem decrescente 
+
+## 10 produtos com maior valor
+SELECT * 
+FROM sales.products 
+ORDER BY price DESC
+LIMIT 10
+
+## Dados de 2020
+SELECT * 
+FROM sales.funnel
+WHERE visit_page_date < '20210101'
+
+## Dados nulos e não nulos 
+SELECT * 
+FROM sales.funnel 
+WHERE visit_page_date < '20210101' AND
+paid_date IS NOT NULL
+
+## Criandp uma tabelinha chamada tab_nova
+WITH tab_nova AS (SELECT product_id, COUNT(*) AS cc
+FROM sales.funnel
+GROUP BY product_id)
+
+## Selecionando os que tem mais de 500 acessos 
+SELECT * 
+FROM tab_noca 
+WHERE cc > 500
+
+# Join
+# Criando uma tabelinha chamada tab_nova 
+WITH tab_nova AS(SELECT product_id, COUNT(*) AS cc
+FROM sales.funnel
+GROUP BY product_id)
+
+## Selecionando os que tem mais de 500 acessos
+SELECT * 
+FROM tab_nova LEFT JOIN
+(
+  SELECT product_id, brand, model
+  FROM sales.products
+) AS tab_prod ON
+tab_nova.product_id = tab_prod.product_id
+WHERE cc > 500
+
+## Operações matemáticas 
+SELECT product_id, brand, model, price, price/1000 AS milhar
+FROM sales.products
+
+# Juntar strings 
+SELECT 
+  first_name,
+  last_name, 
+  (first_name ||  ' ' || last_name) as nome_completo
+FROM sales.customers
+
+## Achar valores que contém algo
+SELECT DISTINCT first_name 
+FROM sales.customers 
+WHERE first_name LIKE 'ANA%'
+
+## diferente do de cima
+SELECT DISTINCT first_name 
+FROM sales.customers 
+WHERE first_name = 'ANA'
+
+##
+SELECT DISTINCT first_name 
+FROM sales.customers 
+WHERE first_name <> 'ANA' # --- diferente de 
+
+# Subquery
+SELECT *
+FROM sales.products LEFT JOIN
+(SELECT product_id, COUNT(*) AS cc
+FROM sales.funnel
+GROUP BY product_id) AS tab_nova.
+ON sales.products.product_id = tab_nova.product_id 
+WHERE tab_nova.cc > 1000 
