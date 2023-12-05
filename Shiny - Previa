@@ -1,0 +1,115 @@
+# library
+library(shiny)
+library(shinythemes)
+library(tidyverse)
+library(plotly)
+
+# Dados para o app
+Dados <- read_csv("~/dengue_ic/Algoritmos/Dados_estruturados.csv")
+
+# UI - User Interface
+ui <- fluidPage(
+    
+    # tema
+    theme = shinytheme("darkly"),
+    
+    # Título da aplicação
+    titlePanel("Educação e Deslocamento"),
+
+    # Layout lateral
+    sidebarLayout(
+        sidebarPanel(
+            # Selecionando raças - Selecionar somente um único valor
+            selectInput(inputId = "IdModelo",
+                        label = "Raça ou Cor:",
+                        choices = sort(unique(Dados$Cor))
+                        ),
+            # Selecionando as faixas etárias - Selecionar + de um valor
+            selectizeInput(inputId = "IdIdade",
+                           label = "Faixa Etária:",
+                           choices = sort(unique(Dados$Idade)),
+                           options = list(maxItems = 10)
+                           ),
+            # Filtrando as diversas colunas - Fazer caixa de escolha
+            checkboxGroupInput(inputId = "IdCol",
+                               label = "Variáveis de estudo:",
+                               choices = colnames(Dados)[seq(4,8)],
+                               inline = FALSE
+                               ),
+            # Criando botão para executar
+            actionButton(inputId = "IdExecutar",
+                         label = "Consultar"
+                         )
+        ),
+
+        # Mostrar tudo em destaque gráfico, texto, tabela entre outros...
+        mainPanel(
+           # Texto inicial
+           textOutput(outputId = "teste"),
+           
+           # Plot do gráfico de barras
+           plotlyOutput(outputId = "IdGrafBarras"),
+           
+           # Plot do gráfico de Espalhamento
+           plotlyOutput(outputId = "IdGrafEsp"),
+           
+           # Plot do boxplot
+           plotlyOutput(outputId = "IdGrafBox")
+        )
+    )
+)
+
+# Server
+server <- function(input, output) {
+    
+    # Função responsável por executar quando o botão for clicado
+    output$teste <- eventReactive(input$IdExecutar,{
+      paste("Valores Selecionados:", 
+            input$IdModelo,
+            input$IdIdade,
+            input$IdCol
+            )
+    })
+
+    # Gráfico de Barras
+    output$IdGrafBarras <- renderPlotly({
+          ggplotly(Dados %>%
+                 ggplot(aes(y = Cor, x = Superior_Completo, fill = Cor)) +
+                 geom_col() + 
+                 ylab("Raça") + xlab("Superior Completo") + 
+                 ggtitle("Ensino Superior Completo") + 
+                 theme_minimal() + 
+                 theme(plot.title = element_text(hjust = 0.5)) +
+                 scale_x_continuous(trans = "log")
+                 )
+      
+    })
+    
+    # Gráfico de Espalhamento
+    output$IdGrafEsp <- renderPlotly({
+      ggplotly(Dados %>% 
+                 ggplot(aes(x = Superior_Completo, y = Idade)) + 
+                 geom_point(aes(color = Cor)) + 
+                 xlab("Não Determinado") + ylab("Idade") + 
+                 theme_minimal() + 
+                 scale_x_continuous(breaks = seq(0,70000,5000))
+               )
+      
+    })
+    
+    # Gráfico Boxplot
+    output$IdGrafBox <- renderPlotly({
+      ggplotly(Dados %>%
+                 ggplot(aes(x = Cor, y = Nao_determinado, fill = Cor)) + 
+                 geom_boxplot() + 
+                 xlab("Cor") + ylab("Não Determinado") +
+                 theme_minimal() + 
+                 scale_y_continuous(trans = "log")
+               )
+      
+    })
+    
+}
+
+# Rodar a aplicação
+shinyApp(ui = ui, server = server)
