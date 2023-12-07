@@ -181,11 +181,13 @@ df <- df %>% mutate(nr = row_number())
 
 openxlsx::write.xlsx(df, "output/raw_data.xlsx")
 
-
+# Salvando
 df %>%
   distinct(nome, email, cidade, UF, .keep_all = TRUE) %>%
   openxlsx::write.xlsx("filtered_data.xlsx")
 
 # close the server
 remote_driver$server$stop()
+
+
 
